@@ -1,0 +1,42 @@
+{
+  "name": "web",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev --webpack",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint"
+  },
+  "dependencies": {
+    "@hookform/resolvers": "^5.4.0",
+    "@tamagui/animations-react-native": "^2.1.0",
+    "@tamagui/config": "^2.1.0",
+    "@tamagui/font-inter": "^2.1.0",
+    "@tamagui/next-plugin": "^2.1.0",
+    "@tamagui/shorthands": "^2.1.0",
+    "@tamagui/themes": "^2.1.0",
+    "@tanstack/react-query": "^5.100.14",
+    "axios": "^1.16.1",
+    "next": "16.2.7",
+    "react": "19.2.4",
+    "react-dom": "19.2.4",
+    "react-hook-form": "^7.77.0",
+    "react-native-web": "^0.21.2",
+    "recharts": "^3.8.1",
+    "tamagui": "^2.1.0",
+    "zod": "^4.4.3",
+    "zustand": "^5.0.14"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@tamagui/babel-plugin": "^2.1.0",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "16.2.7",
+    "tailwindcss": "^4",
+    "typescript": "^5"
+  }
+}
