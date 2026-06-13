@@ -1,15 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-
-interface HouseholdNode {
-  id: string;
-  name: string;
-  type: "INDIVIDUAL" | "FAMILY" | "COMMUNITY";
-  parent: string | null;
-  avatar_url: string | null;
-  address: Record<string, string>;
-  settings: Record<string, string>;
-}
+import type { HouseholdNode } from "@/types";
 
 interface HouseholdState {
   currentHousehold: HouseholdNode | null;
