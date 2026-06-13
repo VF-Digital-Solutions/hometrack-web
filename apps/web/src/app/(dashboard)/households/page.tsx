@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -8,33 +8,6 @@ import { z } from "zod";
 import { isAxiosError } from "axios";
 import type { HouseholdNode, HouseholdType } from "@/types";
 import { householdService } from "@/services/households";
-
-const MOCK_HOUSEHOLDS: HouseholdNode[] = [
-  {
-    id: "1a2b3c4d-0000-0000-0000-000000000001",
-    name: "Casa Principal",
-    description: "Hogar familiar en la ciudad",
-    type: "FAMILY",
-    parent: null,
-    avatar_url: null,
-    address: { city: "Madrid", country: "España" },
-    settings: {},
-    created_at: "2024-01-15T10:00:00Z",
-    updated_at: "2024-03-20T08:30:00Z",
-  },
-  {
-    id: "1a2b3c4d-0000-0000-0000-000000000002",
-    name: "Apartamento de Verano",
-    description: "Piso en la costa para vacaciones",
-    type: "INDIVIDUAL",
-    parent: null,
-    avatar_url: null,
-    address: { city: "Valencia", country: "España" },
-    settings: {},
-    created_at: "2024-06-01T12:00:00Z",
-    updated_at: "2024-06-01T12:00:00Z",
-  },
-];
 
 const TYPE_LABELS: Record<HouseholdType, string> = {
   INDIVIDUAL: "Individual",
@@ -191,7 +164,17 @@ function HouseholdForm({
 
 export default function HouseholdsPage() {
   const [showForm, setShowForm] = useState(false);
-  const [households, setHouseholds] = useState<HouseholdNode[]>(MOCK_HOUSEHOLDS);
+  const [households, setHouseholds] = useState<HouseholdNode[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
+
+  useEffect(() => {
+    householdService
+      .list()
+      .then(setHouseholds)
+      .catch(() => setFetchError("No se pudieron cargar los hogares."))
+      .finally(() => setLoading(false));
+  }, []);
 
   return (
     <div>
@@ -208,7 +191,15 @@ export default function HouseholdsPage() {
         </button>
       </div>
 
-      {households.length === 0 ? (
+      {loading ? (
+        <div className="flex justify-center py-24">
+          <div className="w-6 h-6 border-2 border-[#C8A96B] border-t-transparent rounded-full animate-spin" />
+        </div>
+      ) : fetchError ? (
+        <div className="flex flex-col items-center justify-center py-24 text-center">
+          <p className="text-red-400 text-sm">{fetchError}</p>
+        </div>
+      ) : households.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-24 text-center">
           <div className="w-12 h-12 rounded-full bg-[#1A1A1A] border border-[#2A2A2A] flex items-center justify-center mb-4">
             <span className="text-[#5A6A5A] text-xl">⌂</span>

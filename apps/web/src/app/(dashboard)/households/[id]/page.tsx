@@ -1,51 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { isAxiosError } from "axios";
 import type { HouseholdNode, HouseholdMembership, HouseholdType, MemberRole } from "@/types";
-
-const MOCK_HOUSEHOLD: HouseholdNode = {
-  id: "1a2b3c4d-0000-0000-0000-000000000001",
-  name: "Casa Principal",
-  description: "Hogar familiar en la ciudad. Espacio compartido para gestionar activos, finanzas y rutinas del día a día.",
-  type: "FAMILY",
-  parent: null,
-  avatar_url: null,
-  address: { street: "Calle Mayor 12", city: "Madrid", country: "España" },
-  settings: {},
-  created_at: "2024-01-15T10:00:00Z",
-  updated_at: "2024-03-20T08:30:00Z",
-};
-
-const MOCK_MEMBERS: HouseholdMembership[] = [
-  {
-    id: "m1",
-    user: { id: "u1", email: "javier@example.com", username: "javier", first_name: "Javier", last_name: "García" },
-    node: "1a2b3c4d-0000-0000-0000-000000000001",
-    role: "OWNER",
-    nickname: null,
-    joined_at: "2024-01-15T10:00:00Z",
-    left_at: null,
-  },
-  {
-    id: "m2",
-    user: { id: "u2", email: "laura@example.com", username: "laura", first_name: "Laura", last_name: "Martínez" },
-    node: "1a2b3c4d-0000-0000-0000-000000000001",
-    role: "ADMIN",
-    nickname: "Lau",
-    joined_at: "2024-01-20T09:00:00Z",
-    left_at: null,
-  },
-  {
-    id: "m3",
-    user: { id: "u3", email: "carlos@example.com", username: "carlos", first_name: "Carlos", last_name: "López" },
-    node: "1a2b3c4d-0000-0000-0000-000000000001",
-    role: "MEMBER",
-    nickname: null,
-    joined_at: "2024-02-05T14:30:00Z",
-    left_at: null,
-  },
-];
+import { householdService } from "@/services/households";
+import { useAuthStore } from "@/store/auth";
 
 const TYPE_LABELS: Record<HouseholdType, string> = {
   INDIVIDUAL: "Individual",
@@ -105,64 +68,184 @@ function MemberRow({ membership }: { membership: HouseholdMembership }) {
   );
 }
 
-function InviteForm() {
+const inviteSchema = z.object({
+  email: z.string().email("Email inválido"),
+  role: z.enum(["ADMIN", "MEMBER", "GUEST"]),
+});
+
+type InviteForm = z.infer<typeof inviteSchema>;
+
+function InviteForm({
+  householdId,
+  onInvited,
+}: {
+  householdId: string;
+  onInvited?: () => void;
+}) {
+  const [success, setSuccess] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors, isSubmitting },
+  } = useForm<InviteForm>({
+    resolver: zodResolver(inviteSchema),
+    defaultValues: { role: "MEMBER" },
+  });
+
+  const onSubmit = async (data: InviteForm) => {
+    setSuccess(null);
+    setError(null);
+    try {
+      await householdService.invite(householdId, data);
+      setSuccess(`Invitación enviada a ${data.email}`);
+      reset();
+      onInvited?.();
+    } catch (err: unknown) {
+      if (isAxiosError(err) && err.response?.data?.detail) {
+        setError(err.response.data.detail);
+      } else {
+        setError("Error al enviar la invitación.");
+      }
+    }
+  };
+
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div>
-          <label className="block text-[#5A6A5A] text-xs uppercase tracking-wider mb-1.5">
-            Correo electrónico
-          </label>
-          <input
-            type="email"
-            placeholder="usuario@ejemplo.com"
-            className="w-full bg-[#0D0D0D] border border-[#2A2A2A] rounded-md px-3 py-2 text-sm text-[#EAE6DD] placeholder-[#5A6A5A] focus:outline-none focus:border-[#C8A96B] transition-colors"
-          />
+      {success && (
+        <div className="bg-green-900/20 border border-green-800 text-green-400 text-sm px-4 py-3 rounded">
+          {success}
         </div>
-        <div>
-          <label className="block text-[#5A6A5A] text-xs uppercase tracking-wider mb-1.5">
-            Rol
-          </label>
-          <select className="w-full bg-[#0D0D0D] border border-[#2A2A2A] rounded-md px-3 py-2 text-sm text-[#EAE6DD] focus:outline-none focus:border-[#C8A96B] transition-colors">
-            <option value="MEMBER">Miembro</option>
-            <option value="ADMIN">Admin</option>
-            <option value="GUEST">Invitado</option>
-          </select>
+      )}
+      {error && (
+        <div className="bg-red-900/20 border border-red-800 text-red-400 text-sm px-4 py-3 rounded">
+          {error}
         </div>
-      </div>
-      <button
-        disabled
-        className="px-4 py-2 text-sm text-[#0D0D0D] bg-[#C8A96B] rounded-md opacity-50 cursor-not-allowed font-medium"
-      >
-        Enviar invitación
-      </button>
+      )}
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-[#5A6A5A] text-xs uppercase tracking-wider mb-1.5">
+              Correo electrónico
+            </label>
+            <input
+              {...register("email")}
+              type="email"
+              autoComplete="off"
+              placeholder="usuario@ejemplo.com"
+              className="w-full bg-[#0D0D0D] border border-[#2A2A2A] rounded-md px-3 py-2 text-sm text-[#EAE6DD] placeholder-[#5A6A5A] focus:outline-none focus:border-[#C8A96B] transition-colors"
+            />
+            {errors.email && (
+              <p className="text-red-400 text-xs mt-1">{errors.email.message}</p>
+            )}
+          </div>
+          <div>
+            <label className="block text-[#5A6A5A] text-xs uppercase tracking-wider mb-1.5">
+              Rol
+            </label>
+            <select
+              {...register("role")}
+              className="w-full bg-[#0D0D0D] border border-[#2A2A2A] rounded-md px-3 py-2 text-sm text-[#EAE6DD] focus:outline-none focus:border-[#C8A96B] transition-colors"
+            >
+              <option value="MEMBER">Miembro</option>
+              <option value="ADMIN">Admin</option>
+              <option value="GUEST">Invitado</option>
+            </select>
+          </div>
+        </div>
+        <button
+          type="submit"
+          disabled={isSubmitting}
+          className="px-4 py-2 text-sm text-[#0D0D0D] bg-[#C8A96B] rounded-md hover:bg-[#b8995b] transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {isSubmitting ? "Enviando..." : "Enviar invitación"}
+        </button>
+      </form>
     </div>
   );
 }
 
-function EditModal({ household, onClose }: { household: HouseholdNode; onClose: () => void }) {
+const editSchema = z.object({
+  name: z.string().min(1, "Requerido"),
+  description: z.string().optional(),
+  type: z.enum(["INDIVIDUAL", "FAMILY", "COMMUNITY"]),
+});
+
+type EditForm = z.infer<typeof editSchema>;
+
+function EditModal({
+  household,
+  onSaved,
+  onClose,
+}: {
+  household: HouseholdNode;
+  onSaved: (h: HouseholdNode) => void;
+  onClose: () => void;
+}) {
+  const [error, setError] = useState<string | null>(null);
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm<EditForm>({
+    resolver: zodResolver(editSchema),
+    defaultValues: {
+      name: household.name,
+      description: household.description,
+      type: household.type,
+    },
+  });
+
+  const onSubmit = async (data: EditForm) => {
+    setError(null);
+    try {
+      const updated = await householdService.update(household.id, data);
+      onSaved(updated);
+      onClose();
+    } catch (err: unknown) {
+      if (isAxiosError(err) && err.response?.data?.detail) {
+        setError(err.response.data.detail);
+      } else {
+        setError("Error al guardar los cambios.");
+      }
+    }
+  };
+
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
       <div className="bg-[#111111] border border-[#2A2A2A] rounded-lg p-6 w-full max-w-md mx-4">
         <h2 className="text-[#EAE6DD] font-semibold mb-5">Editar hogar</h2>
-        <div className="space-y-4">
+
+        {error && (
+          <div className="bg-red-900/20 border border-red-800 text-red-400 text-sm px-4 py-3 rounded mb-4">
+            {error}
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div>
             <label className="block text-[#5A6A5A] text-xs uppercase tracking-wider mb-1.5">
               Nombre
             </label>
             <input
+              {...register("name")}
               type="text"
-              defaultValue={household.name}
               className="w-full bg-[#0D0D0D] border border-[#2A2A2A] rounded-md px-3 py-2 text-sm text-[#EAE6DD] focus:outline-none focus:border-[#C8A96B] transition-colors"
             />
+            {errors.name && (
+              <p className="text-red-400 text-xs mt-1">{errors.name.message}</p>
+            )}
           </div>
           <div>
             <label className="block text-[#5A6A5A] text-xs uppercase tracking-wider mb-1.5">
               Descripción
             </label>
             <textarea
+              {...register("description")}
               rows={3}
-              defaultValue={household.description}
               className="w-full bg-[#0D0D0D] border border-[#2A2A2A] rounded-md px-3 py-2 text-sm text-[#EAE6DD] focus:outline-none focus:border-[#C8A96B] transition-colors resize-none"
             />
           </div>
@@ -171,7 +254,7 @@ function EditModal({ household, onClose }: { household: HouseholdNode; onClose: 
               Tipo
             </label>
             <select
-              defaultValue={household.type}
+              {...register("type")}
               className="w-full bg-[#0D0D0D] border border-[#2A2A2A] rounded-md px-3 py-2 text-sm text-[#EAE6DD] focus:outline-none focus:border-[#C8A96B] transition-colors"
             >
               <option value="INDIVIDUAL">Individual</option>
@@ -179,27 +262,54 @@ function EditModal({ household, onClose }: { household: HouseholdNode; onClose: 
               <option value="COMMUNITY">Comunidad</option>
             </select>
           </div>
-        </div>
-        <div className="flex gap-3 mt-6">
-          <button
-            onClick={onClose}
-            className="flex-1 px-4 py-2 text-sm text-[#5A6A5A] border border-[#2A2A2A] rounded-md hover:text-[#EAE6DD] hover:border-[#5A6A5A] transition-colors"
-          >
-            Cancelar
-          </button>
-          <button
-            disabled
-            className="flex-1 px-4 py-2 text-sm text-[#0D0D0D] bg-[#C8A96B] rounded-md opacity-50 cursor-not-allowed font-medium"
-          >
-            Guardar cambios
-          </button>
-        </div>
+          <div className="flex gap-3 pt-2">
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={isSubmitting}
+              className="flex-1 px-4 py-2 text-sm text-[#5A6A5A] border border-[#2A2A2A] rounded-md hover:text-[#EAE6DD] hover:border-[#5A6A5A] transition-colors disabled:opacity-50"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="flex-1 px-4 py-2 text-sm text-[#0D0D0D] bg-[#C8A96B] rounded-md hover:bg-[#b8995b] transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isSubmitting ? "Guardando..." : "Guardar cambios"}
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   );
 }
 
-function DeleteConfirmModal({ name, onClose }: { name: string; onClose: () => void }) {
+function DeleteConfirmModal({
+  householdId,
+  name,
+  onClose,
+}: {
+  householdId: string;
+  name: string;
+  onClose: () => void;
+}) {
+  const router = useRouter();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleDelete = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      await householdService.remove(householdId);
+      router.push("/households");
+    } catch {
+      setError("Error al eliminar el hogar.");
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
       <div className="bg-[#111111] border border-[#2A2A2A] rounded-lg p-6 w-full max-w-sm mx-4">
@@ -207,18 +317,25 @@ function DeleteConfirmModal({ name, onClose }: { name: string; onClose: () => vo
         <p className="text-[#5A6A5A] text-sm mb-6">
           ¿Eliminar <span className="text-[#EAE6DD]">{name}</span>? Esta acción no se puede deshacer.
         </p>
+        {error && (
+          <div className="bg-red-900/20 border border-red-800 text-red-400 text-sm px-4 py-3 rounded mb-4">
+            {error}
+          </div>
+        )}
         <div className="flex gap-3">
           <button
             onClick={onClose}
-            className="flex-1 px-4 py-2 text-sm text-[#5A6A5A] border border-[#2A2A2A] rounded-md hover:text-[#EAE6DD] hover:border-[#5A6A5A] transition-colors"
+            disabled={loading}
+            className="flex-1 px-4 py-2 text-sm text-[#5A6A5A] border border-[#2A2A2A] rounded-md hover:text-[#EAE6DD] hover:border-[#5A6A5A] transition-colors disabled:opacity-50"
           >
             Cancelar
           </button>
           <button
-            disabled
-            className="flex-1 px-4 py-2 text-sm text-white bg-red-800/50 rounded-md opacity-50 cursor-not-allowed font-medium"
+            onClick={handleDelete}
+            disabled={loading}
+            className="flex-1 px-4 py-2 text-sm text-white bg-red-800/70 rounded-md hover:bg-red-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Eliminar
+            {loading ? "Eliminando..." : "Eliminar"}
           </button>
         </div>
       </div>
@@ -229,13 +346,42 @@ function DeleteConfirmModal({ name, onClose }: { name: string; onClose: () => vo
 export default function HouseholdDetailPage() {
   const params = useParams();
   const router = useRouter();
+  const id = params.id as string;
+
+  const [household, setHousehold] = useState<HouseholdNode | null>(null);
+  const [members, setMembers] = useState<HouseholdMembership[]>([]);
+  const [loading, setLoading] = useState(true);
   const [showEdit, setShowEdit] = useState(false);
   const [showDelete, setShowDelete] = useState(false);
 
-  const household = MOCK_HOUSEHOLD;
-  const members = MOCK_MEMBERS;
-  const currentUserRole: MemberRole = "OWNER";
+  useEffect(() => {
+    Promise.all([householdService.getById(id), householdService.listMembers(id)])
+      .then(([h, m]) => {
+        setHousehold(h);
+        setMembers(m);
+      })
+      .catch((err) => {
+        if (isAxiosError(err) && err.response?.status === 404) {
+          router.push("/households");
+        }
+      })
+      .finally(() => setLoading(false));
+  }, [id, router]);
+
+  const currentUserId = useAuthStore.getState().user?.id;
+  const currentUserRole: MemberRole =
+    members.find((m) => m.user.id === currentUserId)?.role ?? "MEMBER";
   const canInvite = currentUserRole === "OWNER" || currentUserRole === "ADMIN";
+
+  if (loading) {
+    return (
+      <div className="flex justify-center py-24">
+        <div className="w-6 h-6 border-2 border-[#C8A96B] border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (!household) return null;
 
   return (
     <div className="max-w-3xl">
@@ -306,12 +452,24 @@ export default function HouseholdDetailPage() {
           <h3 className="text-[#EAE6DD] font-medium text-sm uppercase tracking-wider mb-4">
             Invitar miembro
           </h3>
-          <InviteForm />
+          <InviteForm householdId={id} />
         </div>
       )}
 
-      {showEdit && <EditModal household={household} onClose={() => setShowEdit(false)} />}
-      {showDelete && <DeleteConfirmModal name={household.name} onClose={() => setShowDelete(false)} />}
+      {showEdit && (
+        <EditModal
+          household={household}
+          onSaved={(updated) => setHousehold(updated)}
+          onClose={() => setShowEdit(false)}
+        />
+      )}
+      {showDelete && (
+        <DeleteConfirmModal
+          householdId={id}
+          name={household.name}
+          onClose={() => setShowDelete(false)}
+        />
+      )}
     </div>
   );
 }
