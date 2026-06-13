@@ -26,6 +26,8 @@ function AuthBootstrap() {
           username: "dev",
           first_name: "Dev",
           last_name: "User",
+          phone_number: null,
+          avatar_url: null,
           preferred_language: "es",
           timezone: "Europe/Madrid",
         },
