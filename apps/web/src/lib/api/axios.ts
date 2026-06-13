@@ -1,7 +1,8 @@
 import axios from "axios";
+import { useAuthStore } from "@/store/auth";
 
 const API_URL =
-  process.env.NEXT_PUBLIC_API_URL || "http://192.168.1.127:8000/api/v1";
+  process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
 
 const apiClient = axios.create({
   baseURL: API_URL,
@@ -10,10 +11,9 @@ const apiClient = axios.create({
   },
 });
 
-// Interceptor de request — agrega el token en cada llamada
 apiClient.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem("access_token");
+    const token = useAuthStore.getState().accessToken;
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -22,7 +22,6 @@ apiClient.interceptors.request.use(
   (error) => Promise.reject(error),
 );
 
-// Interceptor de response — renueva el token si vence
 apiClient.interceptors.response.use(
   (response) => response,
   async (error) => {
@@ -32,19 +31,18 @@ apiClient.interceptors.response.use(
       originalRequest._retry = true;
 
       try {
-        const refreshToken = localStorage.getItem("refresh_token");
+        const refreshToken = useAuthStore.getState().refreshToken;
         const response = await axios.post(`${API_URL}/auth/refresh/`, {
           refresh: refreshToken,
         });
 
-        const newAccessToken = response.data.access;
-        localStorage.setItem("access_token", newAccessToken);
-        originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
+        const { access, refresh } = response.data;
+        useAuthStore.getState().updateTokens(access, refresh);
+        originalRequest.headers.Authorization = `Bearer ${access}`;
 
         return apiClient(originalRequest);
       } catch (refreshError) {
-        localStorage.removeItem("access_token");
-        localStorage.removeItem("refresh_token");
+        useAuthStore.getState().clearAuth();
         window.location.href = "/login";
         return Promise.reject(refreshError);
       }

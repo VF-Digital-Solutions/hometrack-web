@@ -40,8 +40,6 @@ export const authService = {
 
   logout: async (refreshToken: string): Promise<void> => {
     await apiClient.post("/auth/logout/", { refresh: refreshToken });
-    localStorage.removeItem("access_token");
-    localStorage.removeItem("refresh_token");
   },
 
   me: async () => {
@@ -52,10 +50,5 @@ export const authService = {
   refreshToken: async (refresh: string) => {
     const response = await apiClient.post("/auth/refresh/", { refresh });
     return response.data;
-  },
-
-  saveTokens: (accessToken: string, refreshToken: string) => {
-    localStorage.setItem("access_token", accessToken);
-    localStorage.setItem("refresh_token", refreshToken);
   },
 };
