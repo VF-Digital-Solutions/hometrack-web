@@ -50,7 +50,6 @@ export default function LoginPage() {
         "dev-access-token",
         "dev-refresh-token"
       );
-      authService.saveTokens("dev-access-token", "dev-refresh-token");
       router.push("/dashboard");
       return;
     }
@@ -60,7 +59,6 @@ export default function LoginPage() {
     try {
       const response = await authService.login(data);
       setAuth(response.user, response.access, response.refresh);
-      authService.saveTokens(response.access, response.refresh);
       router.push("/dashboard");
     } catch (err: unknown) {
       if (isAxiosError(err) && err.response?.data?.detail) {
