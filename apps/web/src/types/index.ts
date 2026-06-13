@@ -44,6 +44,90 @@ export interface HouseholdInvitation {
   created_at: string;
 }
 
+// ── Finances ──────────────────────────────────────────────────────────────────
+
+export type AccountType = "CASH" | "BANK" | "SAVINGS" | "INVESTMENT" | "CREDIT" | "OTHER";
+export type TransactionType = "INCOME" | "EXPENSE" | "TRANSFER";
+export type FinanceCategoryType = "INCOME" | "EXPENSE";
+export type BudgetPeriod = "MONTHLY" | "QUARTERLY" | "ANNUAL" | "CUSTOM";
+export type RecurringFrequency = "MONTHLY" | "ANNUAL" | "WEEKLY" | "OTHER";
+
+export interface FinanceAccount {
+  id: string;
+  household_node: string;
+  name: string;
+  type: AccountType;
+  currency: string;
+  initial_balance: string;
+  current_balance: string;
+  institution: string;
+  is_shared: boolean;
+  color: string;
+  icon: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface FinanceCategory {
+  id: string;
+  household_node: string | null;
+  name: string;
+  type: FinanceCategoryType;
+  icon: string;
+  color: string;
+  parent: string | null;
+  created_at: string;
+}
+
+export interface FinanceTransaction {
+  id: string;
+  account: string;
+  household_node: string;
+  created_by: string | null;
+  type: TransactionType;
+  amount: string;
+  currency: string;
+  category: string | null;
+  description: string;
+  transaction_date: string;
+  is_recurring: boolean;
+  tags: string[];
+  receipt_url: string | null;
+  transfer_to_account: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface FinanceBudget {
+  id: string;
+  household_node: string;
+  category: string | null;
+  name: string;
+  amount: string;
+  currency: string;
+  period: BudgetPeriod;
+  period_start: string;
+  period_end: string | null;
+  alert_threshold: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface RecurringExpense {
+  id: string;
+  household_node: string;
+  category: string | null;
+  name: string;
+  amount: string;
+  currency: string;
+  billing_day: number | null;
+  frequency: RecurringFrequency;
+  reminder_days_before: number;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
 // ── Assets ────────────────────────────────────────────────────────────────────
 
 export type AssetStatus = "ACTIVE" | "IN_REPAIR" | "INACTIVE" | "DISPOSED";
