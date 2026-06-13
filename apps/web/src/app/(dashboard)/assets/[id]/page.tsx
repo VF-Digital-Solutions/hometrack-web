@@ -212,7 +212,7 @@ function EditAssetModal({
 
             <div>
               <label className="block text-[#5A6A5A] text-xs uppercase tracking-wider mb-1.5">Fecha de compra</label>
-              <input {...register("purchase_date")} type="date" className="w-full bg-[#0D0D0D] border border-[#2A2A2A] rounded-md px-3 py-2 text-sm text-[#EAE6DD] focus:outline-none focus:border-[#C8A96B] transition-colors" />
+              <input {...register("purchase_date")} type="date" className="w-full appearance-none bg-[#0D0D0D] border border-[#2A2A2A] rounded-md px-3 py-2 text-sm text-[#EAE6DD] focus:outline-none focus:border-[#C8A96B] transition-colors" />
             </div>
 
             <div>
@@ -222,7 +222,7 @@ function EditAssetModal({
 
             <div>
               <label className="block text-[#5A6A5A] text-xs uppercase tracking-wider mb-1.5">Vencimiento garantía</label>
-              <input {...register("warranty_expiry")} type="date" className="w-full bg-[#0D0D0D] border border-[#2A2A2A] rounded-md px-3 py-2 text-sm text-[#EAE6DD] focus:outline-none focus:border-[#C8A96B] transition-colors" />
+              <input {...register("warranty_expiry")} type="date" className="w-full appearance-none bg-[#0D0D0D] border border-[#2A2A2A] rounded-md px-3 py-2 text-sm text-[#EAE6DD] focus:outline-none focus:border-[#C8A96B] transition-colors" />
             </div>
 
             <div className="sm:col-span-2">
@@ -472,13 +472,13 @@ function CreateMaintenanceModal({
 
             <div className="sm:col-span-2">
               <label className="block text-[#5A6A5A] text-xs uppercase tracking-wider mb-1.5">Fecha programada *</label>
-              <input {...register("scheduled_at")} type="datetime-local" className="w-full bg-[#0D0D0D] border border-[#2A2A2A] rounded-md px-3 py-2 text-sm text-[#EAE6DD] focus:outline-none focus:border-[#C8A96B] transition-colors" />
+              <input {...register("scheduled_at")} type="datetime-local" className="w-full appearance-none bg-[#0D0D0D] border border-[#2A2A2A] rounded-md px-3 py-2 text-sm text-[#EAE6DD] focus:outline-none focus:border-[#C8A96B] transition-colors" />
               {errors.scheduled_at && <p className="text-red-400 text-xs mt-1">{errors.scheduled_at.message}</p>}
             </div>
 
             <div className="sm:col-span-2">
               <label className="block text-[#5A6A5A] text-xs uppercase tracking-wider mb-1.5">Fecha completado</label>
-              <input {...register("completed_at")} type="datetime-local" className="w-full bg-[#0D0D0D] border border-[#2A2A2A] rounded-md px-3 py-2 text-sm text-[#EAE6DD] focus:outline-none focus:border-[#C8A96B] transition-colors" />
+              <input {...register("completed_at")} type="datetime-local" className="w-full appearance-none bg-[#0D0D0D] border border-[#2A2A2A] rounded-md px-3 py-2 text-sm text-[#EAE6DD] focus:outline-none focus:border-[#C8A96B] transition-colors" />
             </div>
 
             <div>
