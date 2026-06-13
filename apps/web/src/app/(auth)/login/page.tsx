@@ -85,12 +85,14 @@ export default function LoginPage() {
         </div>
       )}
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+      <form onSubmit={handleSubmit(onSubmit)} method="post" action="#" className="space-y-4">
         <div>
           <label className="block text-sm text-[#5A6A5A] mb-1">Email</label>
           <input
             {...register("email")}
             type="email"
+            autoComplete="email"
+            autoCapitalize="none"
             placeholder="tu@email.com"
             className="w-full bg-[#1A1A1A] border border-[#2A2A2A] text-[#EAE6DD] rounded px-4 py-3 text-sm focus:outline-none focus:border-[#C8A96B] placeholder-[#5A6A5A]"
           />
@@ -104,6 +106,7 @@ export default function LoginPage() {
           <input
             {...register("password")}
             type="password"
+            autoComplete="current-password"
             placeholder="••••••••"
             className="w-full bg-[#1A1A1A] border border-[#2A2A2A] text-[#EAE6DD] rounded px-4 py-3 text-sm focus:outline-none focus:border-[#C8A96B] placeholder-[#5A6A5A]"
           />
