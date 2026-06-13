@@ -1,5 +1,5 @@
 # ── base ──────────────────────────────────────────────────────────────────────
-FROM node:20-alpine AS base
+FROM node:20-slim AS base
 WORKDIR /app
 
 # ── deps: instala dependencias del workspace completo ─────────────────────────
@@ -16,7 +16,7 @@ COPY . .
 RUN npm run build --filter=web
 
 # ── production: imagen mínima con el standalone output ────────────────────────
-FROM node:20-alpine AS production
+FROM node:20-slim AS production
 
 WORKDIR /app
 ENV NODE_ENV=production
