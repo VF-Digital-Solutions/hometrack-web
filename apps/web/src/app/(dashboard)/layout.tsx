@@ -77,7 +77,13 @@ export default function DashboardLayout({
 
       {/* Main content */}
       <main className="flex-1 flex flex-col">
-        <header className="h-14 bg-[#0A0A0A] border-b border-[#2A2A2A] flex items-center justify-end px-6">
+        <header className="h-14 bg-[#0A0A0A] border-b border-[#2A2A2A] flex items-center justify-end px-6 gap-4">
+          <Link
+            href="/profile"
+            className="text-sm text-[#5A6A5A] hover:text-[#C8A96B] transition-colors"
+          >
+            Mi perfil
+          </Link>
           <button
             onClick={handleLogout}
             disabled={isLoggingOut}

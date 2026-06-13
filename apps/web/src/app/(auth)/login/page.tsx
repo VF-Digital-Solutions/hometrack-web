@@ -44,6 +44,8 @@ export default function LoginPage() {
           username: "testuser",
           first_name: "Test",
           last_name: "User",
+          phone_number: null,
+          avatar_url: null,
           preferred_language: "es",
           timezone: "America/Argentina/Buenos_Aires",
         },

@@ -7,6 +7,8 @@ interface User {
   username: string;
   first_name: string;
   last_name: string;
+  phone_number: string | null;
+  avatar_url: string | null;
   preferred_language: string;
   timezone: string;
 }
@@ -17,6 +19,7 @@ interface AuthState {
   refreshToken: string | null;
   isAuthenticated: boolean;
   setAuth: (user: User, accessToken: string, refreshToken: string) => void;
+  updateUser: (user: User) => void;
   updateTokens: (accessToken: string, refreshToken: string) => void;
   clearAuth: () => void;
 }
@@ -36,6 +39,8 @@ export const useAuthStore = create<AuthState>()(
           refreshToken,
           isAuthenticated: true,
         }),
+
+      updateUser: (user) => set({ user }),
 
       updateTokens: (accessToken, refreshToken) =>
         set({ accessToken, refreshToken }),
