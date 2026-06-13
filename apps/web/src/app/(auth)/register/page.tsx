@@ -45,7 +45,6 @@ export default function RegisterPage() {
       const { confirm_password, ...credentials } = data;
       const response = await authService.register(credentials);
       setAuth(response.user, response.access, response.refresh);
-      authService.saveTokens(response.access, response.refresh);
       router.push("/dashboard");
     } catch (err: unknown) {
       if (isAxiosError(err) && err.response?.data?.detail) {
