@@ -209,3 +209,74 @@ export interface MaintenanceTemplate {
   suggested_interval_days: number | null;
   checklist: ChecklistItem[];
 }
+
+// ── Routines & Habits ─────────────────────────────────────────────────────────
+
+export type HabitCategory = "HEALTH" | "FITNESS" | "LEARNING" | "HOME" | "FINANCE" | "CUSTOM";
+export type HabitFrequency = "DAILY" | "WEEKLY" | "CUSTOM";
+export type HabitVisibility = "PRIVATE" | "HOUSEHOLD";
+export type HabitLogStatus = "COMPLETED" | "SKIPPED" | "PARTIAL";
+export type RoutineCategory = "CLEANING" | "MAINTENANCE" | "SHOPPING" | "COOKING" | "CUSTOM";
+export type RoutineRecurrence = "ONCE" | "DAILY" | "WEEKLY" | "MONTHLY" | "CUSTOM";
+export type OccurrenceStatus = "PENDING" | "IN_PROGRESS" | "COMPLETED" | "SKIPPED";
+
+export interface Habit {
+  id: string;
+  user: string;
+  household_node: string | null;
+  name: string;
+  description: string;
+  icon: string;
+  color: string;
+  category: HabitCategory;
+  visibility: HabitVisibility;
+  frequency_type: HabitFrequency;
+  frequency_config: Record<string, unknown>;
+  target_value: string | null;
+  target_unit: string;
+  reminder_time: string | null;
+  start_date: string;
+  archived_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface HabitStreak {
+  id: string;
+  habit: string;
+  current_streak: number;
+  longest_streak: number;
+  last_completed_at: string | null;
+  total_completions: number;
+  updated_at: string;
+}
+
+export interface HouseholdRoutine {
+  id: string;
+  household_node: string;
+  created_by: string | null;
+  title: string;
+  description: string;
+  category: RoutineCategory;
+  recurrence_type: RoutineRecurrence;
+  recurrence_config: Record<string, unknown>;
+  estimated_duration_minutes: number | null;
+  is_rotative: boolean;
+  assignees: string[];
+  linked_asset: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface HouseholdRoutineOccurrence {
+  id: string;
+  routine: string;
+  assigned_to: string | null;
+  due_at: string;
+  status: OccurrenceStatus;
+  completed_at: string | null;
+  completed_by: string | null;
+  notes: string;
+  proof_image_url: string | null;
+  created_at: string;
+}
