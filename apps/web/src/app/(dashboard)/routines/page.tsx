@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { isAxiosError } from "axios";
@@ -59,16 +59,30 @@ function StatusBadge({ status }: { status: OccurrenceStatus }) {
 
 // ── Habits tab ────────────────────────────────────────────────────────────────
 
-const createHabitSchema = z.object({
-  name: z.string().min(1, "Requerido"),
-  category: z.enum(["HEALTH", "FITNESS", "LEARNING", "HOME", "FINANCE", "CUSTOM"]),
-  frequency_type: z.enum(["DAILY", "WEEKLY", "CUSTOM"]),
-  visibility: z.enum(["PRIVATE", "HOUSEHOLD"]),
-  start_date: z.string().min(1, "Requerido"),
-  description: z.string().optional(),
-});
+const createHabitSchema = z
+  .object({
+    name: z.string().min(1, "Requerido"),
+    category: z.enum(["HEALTH", "FITNESS", "LEARNING", "HOME", "FINANCE", "CUSTOM"]),
+    custom_category_label: z.string().optional(),
+    frequency_type: z.enum(["DAILY", "WEEKLY", "CUSTOM"]),
+    frequency_interval_days: z.string().optional(),
+    visibility: z.enum(["PRIVATE", "HOUSEHOLD"]),
+    start_date: z.string().min(1, "Requerido"),
+    description: z.string().optional(),
+  })
+  .refine(
+    (d) => d.category !== "CUSTOM" || (d.custom_category_label ?? "").trim().length > 0,
+    { message: "Escribe el nombre de la categoría", path: ["custom_category_label"] }
+  )
+  .refine(
+    (d) => d.frequency_type !== "CUSTOM" || (Number(d.frequency_interval_days) >= 1),
+    { message: "Indica cada cuántos días", path: ["frequency_interval_days"] }
+  );
 
 type CreateHabitForm = z.infer<typeof createHabitSchema>;
+
+const inputCls =
+  "w-full bg-[#0D0D0D] border border-[#2A2A2A] rounded-md px-3 py-2 text-sm text-[#EAE6DD] placeholder-[#5A6A5A] focus:outline-none focus:border-[#C8A96B] transition-colors";
 
 function CreateHabitModal({
   onCreated,
@@ -84,6 +98,7 @@ function CreateHabitModal({
   const {
     register,
     handleSubmit,
+    control,
     formState: { errors },
   } = useForm<CreateHabitForm>({
     resolver: zodResolver(createHabitSchema),
@@ -95,11 +110,29 @@ function CreateHabitModal({
     },
   });
 
+  const selectedCategory = useWatch({ control, name: "category" });
+  const selectedFrequency = useWatch({ control, name: "frequency_type" });
+
   const onSubmit = async (data: CreateHabitForm) => {
     setLoading(true);
     setError(null);
     try {
-      const created = await routineService.createHabit(data);
+      const frequency_config: Record<string, unknown> = {};
+      if (data.category === "CUSTOM" && data.custom_category_label) {
+        frequency_config.category_label = data.custom_category_label.trim();
+      }
+      if (data.frequency_type === "CUSTOM" && data.frequency_interval_days) {
+        frequency_config.interval_days = Number(data.frequency_interval_days);
+      }
+      const created = await routineService.createHabit({
+        name: data.name,
+        category: data.category,
+        frequency_type: data.frequency_type,
+        visibility: data.visibility,
+        start_date: data.start_date,
+        description: data.description,
+        frequency_config,
+      });
       onCreated(created);
       onClose();
     } catch (err: unknown) {
@@ -115,7 +148,7 @@ function CreateHabitModal({
 
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-      <div className="bg-[#111111] border border-[#2A2A2A] rounded-lg p-6 w-full max-w-md">
+      <div className="bg-[#111111] border border-[#2A2A2A] rounded-lg p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
         <h2 className="text-[#EAE6DD] font-semibold mb-5">Nuevo hábito</h2>
 
         {error && (
@@ -131,42 +164,65 @@ function CreateHabitModal({
               {...register("name")}
               type="text"
               placeholder="Ej. Leer 20 minutos"
-              className="w-full bg-[#0D0D0D] border border-[#2A2A2A] rounded-md px-3 py-2 text-sm text-[#EAE6DD] placeholder-[#5A6A5A] focus:outline-none focus:border-[#C8A96B] transition-colors"
+              className={inputCls}
             />
             {errors.name && <p className="text-red-400 text-xs mt-1">{errors.name.message}</p>}
           </div>
 
+          {/* Categoría */}
+          <div>
+            <label className="block text-[#5A6A5A] text-xs uppercase tracking-wider mb-1.5">Categoría</label>
+            <select {...register("category")} className={inputCls}>
+              {Object.entries(HABIT_CATEGORY_LABELS).map(([k, v]) => (
+                <option key={k} value={k}>{v}</option>
+              ))}
+            </select>
+            {selectedCategory === "CUSTOM" && (
+              <div className="mt-2">
+                <input
+                  {...register("custom_category_label")}
+                  type="text"
+                  placeholder="Nombre de tu categoría (ej. Meditación)"
+                  className={inputCls}
+                  autoFocus
+                />
+                {errors.custom_category_label && (
+                  <p className="text-red-400 text-xs mt-1">{errors.custom_category_label.message}</p>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Frecuencia */}
+          <div>
+            <label className="block text-[#5A6A5A] text-xs uppercase tracking-wider mb-1.5">Frecuencia</label>
+            <select {...register("frequency_type")} className={inputCls}>
+              <option value="DAILY">Diario</option>
+              <option value="WEEKLY">Semanal</option>
+              <option value="CUSTOM">Personalizado</option>
+            </select>
+            {selectedFrequency === "CUSTOM" && (
+              <div className="mt-2 flex items-center gap-2">
+                <span className="text-[#5A6A5A] text-sm shrink-0">Cada</span>
+                <input
+                  {...register("frequency_interval_days")}
+                  type="number"
+                  min="1"
+                  placeholder="N"
+                  className="w-20 bg-[#0D0D0D] border border-[#2A2A2A] rounded-md px-3 py-2 text-sm text-[#EAE6DD] focus:outline-none focus:border-[#C8A96B] transition-colors text-center"
+                />
+                <span className="text-[#5A6A5A] text-sm shrink-0">días</span>
+                {errors.frequency_interval_days && (
+                  <p className="text-red-400 text-xs">{errors.frequency_interval_days.message}</p>
+                )}
+              </div>
+            )}
+          </div>
+
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-[#5A6A5A] text-xs uppercase tracking-wider mb-1.5">Categoría</label>
-              <select
-                {...register("category")}
-                className="w-full bg-[#0D0D0D] border border-[#2A2A2A] rounded-md px-3 py-2 text-sm text-[#EAE6DD] focus:outline-none focus:border-[#C8A96B] transition-colors"
-              >
-                {Object.entries(HABIT_CATEGORY_LABELS).map(([k, v]) => (
-                  <option key={k} value={k}>{v}</option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-[#5A6A5A] text-xs uppercase tracking-wider mb-1.5">Frecuencia</label>
-              <select
-                {...register("frequency_type")}
-                className="w-full bg-[#0D0D0D] border border-[#2A2A2A] rounded-md px-3 py-2 text-sm text-[#EAE6DD] focus:outline-none focus:border-[#C8A96B] transition-colors"
-              >
-                <option value="DAILY">Diario</option>
-                <option value="WEEKLY">Semanal</option>
-                <option value="CUSTOM">Personalizado</option>
-              </select>
-            </div>
-
-            <div>
               <label className="block text-[#5A6A5A] text-xs uppercase tracking-wider mb-1.5">Visibilidad</label>
-              <select
-                {...register("visibility")}
-                className="w-full bg-[#0D0D0D] border border-[#2A2A2A] rounded-md px-3 py-2 text-sm text-[#EAE6DD] focus:outline-none focus:border-[#C8A96B] transition-colors"
-              >
+              <select {...register("visibility")} className={inputCls}>
                 <option value="PRIVATE">Privado</option>
                 <option value="HOUSEHOLD">Hogar</option>
               </select>
@@ -177,7 +233,7 @@ function CreateHabitModal({
               <input
                 {...register("start_date")}
                 type="date"
-                className="w-full appearance-none bg-[#0D0D0D] border border-[#2A2A2A] rounded-md px-3 py-2 text-sm text-[#EAE6DD] focus:outline-none focus:border-[#C8A96B] transition-colors"
+                className={"appearance-none " + inputCls}
               />
               {errors.start_date && <p className="text-red-400 text-xs mt-1">{errors.start_date.message}</p>}
             </div>
@@ -189,7 +245,7 @@ function CreateHabitModal({
               {...register("description")}
               rows={2}
               placeholder="Descripción opcional"
-              className="w-full bg-[#0D0D0D] border border-[#2A2A2A] rounded-md px-3 py-2 text-sm text-[#EAE6DD] placeholder-[#5A6A5A] focus:outline-none focus:border-[#C8A96B] transition-colors resize-none"
+              className={inputCls + " resize-none"}
             />
           </div>
 
@@ -264,6 +320,18 @@ function HabitCard({
     year: "numeric",
   });
 
+  const cfg = habit.frequency_config as Record<string, unknown>;
+
+  const categoryLabel =
+    habit.category === "CUSTOM" && typeof cfg.category_label === "string"
+      ? cfg.category_label
+      : HABIT_CATEGORY_LABELS[habit.category];
+
+  const freqLabel =
+    habit.frequency_type === "CUSTOM" && typeof cfg.interval_days === "number"
+      ? `Cada ${cfg.interval_days} días`
+      : FREQ_LABELS[habit.frequency_type];
+
   return (
     <div className="bg-[#111111] border border-[#2A2A2A] rounded-lg p-5 flex flex-col gap-3">
       {/* Header */}
@@ -276,9 +344,9 @@ function HabitCard({
             <h3 className="text-[#EAE6DD] font-medium text-sm leading-snug truncate">{habit.name}</h3>
             <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
               <span className="text-xs px-1.5 py-0.5 rounded bg-[#1A1A1A] border border-[#2A2A2A] text-[#5A6A5A]">
-                {HABIT_CATEGORY_LABELS[habit.category]}
+                {categoryLabel}
               </span>
-              <span className="text-xs text-[#5A6A5A]">{FREQ_LABELS[habit.frequency_type]}</span>
+              <span className="text-xs text-[#5A6A5A]">{freqLabel}</span>
             </div>
           </div>
         </div>
@@ -361,14 +429,20 @@ const RECURRENCE_LABELS: Record<string, string> = {
   CUSTOM: "Personalizado",
 };
 
-const createRoutineSchema = z.object({
-  household_node: z.string().min(1, "Requerido"),
-  title: z.string().min(1, "Requerido"),
-  category: z.string(),
-  recurrence_type: z.string(),
-  description: z.string().optional(),
-  estimated_duration_minutes: z.string().optional(),
-});
+const createRoutineSchema = z
+  .object({
+    household_node: z.string().min(1, "Requerido"),
+    title: z.string().min(1, "Requerido"),
+    category: z.string(),
+    recurrence_type: z.string(),
+    recurrence_interval_days: z.string().optional(),
+    description: z.string().optional(),
+    estimated_duration_minutes: z.string().optional(),
+  })
+  .refine(
+    (d) => d.recurrence_type !== "CUSTOM" || Number(d.recurrence_interval_days) >= 1,
+    { message: "Indica cada cuántos días", path: ["recurrence_interval_days"] }
+  );
 
 type CreateRoutineForm = z.infer<typeof createRoutineSchema>;
 
@@ -387,21 +461,33 @@ function CreateRoutineModal({
   const {
     register,
     handleSubmit,
+    control,
     formState: { errors },
   } = useForm<CreateRoutineForm>({
     resolver: zodResolver(createRoutineSchema),
     defaultValues: { category: "CUSTOM", recurrence_type: "WEEKLY" },
   });
 
+  const selectedRecurrence = useWatch({ control, name: "recurrence_type" });
+
   const onSubmit = async (data: CreateRoutineForm) => {
     setLoading(true);
     setError(null);
     try {
+      const recurrence_config: Record<string, unknown> =
+        data.recurrence_type === "CUSTOM" && data.recurrence_interval_days
+          ? { interval_days: Number(data.recurrence_interval_days) }
+          : {};
       const payload = {
-        ...data,
+        household_node: data.household_node,
+        title: data.title,
+        category: data.category,
+        recurrence_type: data.recurrence_type,
+        description: data.description,
         estimated_duration_minutes: data.estimated_duration_minutes
           ? Number(data.estimated_duration_minutes)
           : null,
+        recurrence_config,
       };
       const created = await routineService.createRoutine(payload);
       onCreated(created);
@@ -419,7 +505,7 @@ function CreateRoutineModal({
 
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-      <div className="bg-[#111111] border border-[#2A2A2A] rounded-lg p-6 w-full max-w-md">
+      <div className="bg-[#111111] border border-[#2A2A2A] rounded-lg p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
         <h2 className="text-[#EAE6DD] font-semibold mb-5">Nueva rutina del hogar</h2>
 
         {error && (
@@ -435,17 +521,14 @@ function CreateRoutineModal({
               {...register("title")}
               type="text"
               placeholder="Ej. Limpiar cocina"
-              className="w-full bg-[#0D0D0D] border border-[#2A2A2A] rounded-md px-3 py-2 text-sm text-[#EAE6DD] placeholder-[#5A6A5A] focus:outline-none focus:border-[#C8A96B] transition-colors"
+              className={inputCls}
             />
             {errors.title && <p className="text-red-400 text-xs mt-1">{errors.title.message}</p>}
           </div>
 
           <div>
             <label className="block text-[#5A6A5A] text-xs uppercase tracking-wider mb-1.5">Hogar *</label>
-            <select
-              {...register("household_node")}
-              className="w-full bg-[#0D0D0D] border border-[#2A2A2A] rounded-md px-3 py-2 text-sm text-[#EAE6DD] focus:outline-none focus:border-[#C8A96B] transition-colors"
-            >
+            <select {...register("household_node")} className={inputCls}>
               <option value="">Seleccionar hogar</option>
               {households.map((h) => (
                 <option key={h.id} value={h.id}>{h.name}</option>
@@ -457,10 +540,7 @@ function CreateRoutineModal({
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-[#5A6A5A] text-xs uppercase tracking-wider mb-1.5">Categoría</label>
-              <select
-                {...register("category")}
-                className="w-full bg-[#0D0D0D] border border-[#2A2A2A] rounded-md px-3 py-2 text-sm text-[#EAE6DD] focus:outline-none focus:border-[#C8A96B] transition-colors"
-              >
+              <select {...register("category")} className={inputCls}>
                 {Object.entries(ROUTINE_CATEGORY_LABELS).map(([k, v]) => (
                   <option key={k} value={k}>{v}</option>
                 ))}
@@ -469,16 +549,33 @@ function CreateRoutineModal({
 
             <div>
               <label className="block text-[#5A6A5A] text-xs uppercase tracking-wider mb-1.5">Recurrencia</label>
-              <select
-                {...register("recurrence_type")}
-                className="w-full bg-[#0D0D0D] border border-[#2A2A2A] rounded-md px-3 py-2 text-sm text-[#EAE6DD] focus:outline-none focus:border-[#C8A96B] transition-colors"
-              >
+              <select {...register("recurrence_type")} className={inputCls}>
                 {Object.entries(RECURRENCE_LABELS).map(([k, v]) => (
                   <option key={k} value={k}>{v}</option>
                 ))}
               </select>
             </div>
           </div>
+
+          {selectedRecurrence === "CUSTOM" && (
+            <div>
+              <label className="block text-[#5A6A5A] text-xs uppercase tracking-wider mb-1.5">Período personalizado</label>
+              <div className="flex items-center gap-2">
+                <span className="text-[#5A6A5A] text-sm shrink-0">Cada</span>
+                <input
+                  {...register("recurrence_interval_days")}
+                  type="number"
+                  min="1"
+                  placeholder="N"
+                  className="w-20 bg-[#0D0D0D] border border-[#2A2A2A] rounded-md px-3 py-2 text-sm text-[#EAE6DD] focus:outline-none focus:border-[#C8A96B] transition-colors text-center"
+                />
+                <span className="text-[#5A6A5A] text-sm shrink-0">días</span>
+                {errors.recurrence_interval_days && (
+                  <p className="text-red-400 text-xs">{errors.recurrence_interval_days.message}</p>
+                )}
+              </div>
+            </div>
+          )}
 
           <div>
             <label className="block text-[#5A6A5A] text-xs uppercase tracking-wider mb-1.5">Duración estimada (min)</label>
@@ -487,7 +584,7 @@ function CreateRoutineModal({
               type="number"
               min="1"
               placeholder="Ej. 30"
-              className="w-full bg-[#0D0D0D] border border-[#2A2A2A] rounded-md px-3 py-2 text-sm text-[#EAE6DD] placeholder-[#5A6A5A] focus:outline-none focus:border-[#C8A96B] transition-colors"
+              className={inputCls}
             />
           </div>
 
@@ -497,7 +594,7 @@ function CreateRoutineModal({
               {...register("description")}
               rows={2}
               placeholder="Descripción opcional"
-              className="w-full bg-[#0D0D0D] border border-[#2A2A2A] rounded-md px-3 py-2 text-sm text-[#EAE6DD] placeholder-[#5A6A5A] focus:outline-none focus:border-[#C8A96B] transition-colors resize-none"
+              className={inputCls + " resize-none"}
             />
           </div>
 
@@ -617,6 +714,12 @@ function RoutineCard({
   routine: HouseholdRoutine;
   onViewOccurrences: (r: HouseholdRoutine) => void;
 }) {
+  const rcfg = routine.recurrence_config as Record<string, unknown>;
+  const recurrenceLabel =
+    routine.recurrence_type === "CUSTOM" && typeof rcfg.interval_days === "number"
+      ? `Cada ${rcfg.interval_days} días`
+      : (RECURRENCE_LABELS[routine.recurrence_type] ?? routine.recurrence_type);
+
   return (
     <div className="bg-[#111111] border border-[#2A2A2A] rounded-lg p-5 flex flex-col gap-3">
       <div className="flex items-start justify-between">
@@ -624,13 +727,16 @@ function RoutineCard({
           {routine.title.charAt(0).toUpperCase()}
         </div>
         <span className="text-xs px-2 py-0.5 rounded-full border text-[#5A6A5A] bg-[#1A1A1A] border-[#2A2A2A]">
-          {RECURRENCE_LABELS[routine.recurrence_type] ?? routine.recurrence_type}
+          {recurrenceLabel}
         </span>
       </div>
 
       <div>
         <h3 className="text-[#EAE6DD] font-medium text-sm mb-1">{routine.title}</h3>
         <p className="text-[#5A6A5A] text-xs">{ROUTINE_CATEGORY_LABELS[routine.category] ?? routine.category}</p>
+        {routine.description && (
+          <p className="text-[#5A6A5A] text-xs mt-1 line-clamp-2">{routine.description}</p>
+        )}
         {routine.estimated_duration_minutes && (
           <p className="text-[#5A6A5A] text-xs mt-0.5">{routine.estimated_duration_minutes} min</p>
         )}

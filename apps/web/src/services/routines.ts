@@ -11,6 +11,7 @@ export interface CreateHabitPayload {
   name: string;
   category?: string;
   frequency_type?: string;
+  frequency_config?: Record<string, unknown>;
   visibility?: string;
   start_date: string;
   description?: string;
@@ -36,6 +37,7 @@ export interface CreateRoutinePayload {
   title: string;
   category?: string;
   recurrence_type?: string;
+  recurrence_config?: Record<string, unknown>;
   description?: string;
   estimated_duration_minutes?: number | null;
   is_rotative?: boolean;
