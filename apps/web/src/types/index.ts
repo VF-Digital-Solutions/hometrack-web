@@ -195,3 +195,17 @@ export interface MaintenanceRecord {
   created_at: string;
   updated_at: string;
 }
+
+export interface ChecklistItem {
+  label: string;
+  required?: boolean;
+}
+
+export interface MaintenanceTemplate {
+  id: string;
+  category: string;
+  title: string;
+  description: string;
+  suggested_interval_days: number | null;
+  checklist: ChecklistItem[];
+}

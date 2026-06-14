@@ -5,9 +5,11 @@ import type {
   AssetDocument,
   AssetStatus,
   MaintenanceRecord,
+  MaintenanceTemplate,
   MaintenanceType,
   MaintenanceStatus,
   DocumentType,
+  ChecklistItem,
 } from "@/types";
 
 export interface CreateAssetPayload {
@@ -47,6 +49,16 @@ export interface UploadDocumentPayload {
   type: DocumentType;
   file: File;
 }
+
+export interface CreateTemplatePayload {
+  category: string;
+  title: string;
+  description?: string;
+  suggested_interval_days?: number | null;
+  checklist?: ChecklistItem[];
+}
+
+export type UpdateTemplatePayload = Partial<CreateTemplatePayload>;
 
 export const assetService = {
   listCategories: async (): Promise<AssetCategory[]> => {
@@ -109,5 +121,25 @@ export const assetService = {
   updateMaintenance: async (maintenanceId: string, payload: UpdateMaintenancePayload): Promise<MaintenanceRecord> => {
     const response = await apiClient.patch(`/assets/maintenance/${maintenanceId}/`, payload);
     return response.data;
+  },
+
+  listTemplates: async (categoryId?: string): Promise<MaintenanceTemplate[]> => {
+    const params = categoryId ? { category: categoryId } : {};
+    const response = await apiClient.get("/assets/templates/", { params });
+    return response.data;
+  },
+
+  createTemplate: async (payload: CreateTemplatePayload): Promise<MaintenanceTemplate> => {
+    const response = await apiClient.post("/assets/templates/", payload);
+    return response.data;
+  },
+
+  updateTemplate: async (id: string, payload: UpdateTemplatePayload): Promise<MaintenanceTemplate> => {
+    const response = await apiClient.patch(`/assets/templates/${id}/`, payload);
+    return response.data;
+  },
+
+  deleteTemplate: async (id: string): Promise<void> => {
+    await apiClient.delete(`/assets/templates/${id}/`);
   },
 };
